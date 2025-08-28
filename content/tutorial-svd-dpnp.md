@@ -206,10 +206,8 @@ plt.show()
 Now, applying the [linalg.svd](https://numpy.org/devdocs/reference/generated/numpy.linalg.svd.html#numpy.linalg.svd) function to this matrix, we obtain the following decomposition:
 
 ```{code-cell}
-# U, s, Vt = linalg.svd(img_gray)                                 # Original code to be executed on the CPU
-
-U, s, Vt = dpnp.linalg.svd (dpnp.array(img_gray))                 # Use DPNP variant of linalg.svd
-U, s, Vt = dpnp.asnumpy(U), dpnp.asnumpy(s), dpnp.asnumpy(Vt)     # Turn data objects back to regular NumPy
+# U, s, Vt = linalg.svd(img_gray)                                             # Original code to be executed on the CPU
+U, s, Vt = (dpnp.asnumpy(x) for x in dpnp.linalg.svd (dpnp.array(img_gray)))  # Use DPNP variant of linalg.svd
 ```
 
 **Note** If you are using your own image, this command might take a while to run, depending on the size of your image and your hardware. Don't worry, this is normal! The SVD can be a pretty intensive computation.
@@ -237,7 +235,9 @@ import numpy as np
 # Sigma = np.zeros((U.shape[1], Vt.shape[0]))                # Original code to be executed on the CPU
 Sigma = dpnp.asnumpy (dpnp.zeros((U.shape[1], Vt.shape[0]))) # Use DPNP variant of zeros
 # np.fill_diagonal(Sigma, s)                                 # Original code to be executed on the CPU
-dpnp.fill_diagonal (dpnp.array(Sigma), dpnp.array(s))        # Use DPNP variant of fill_diagonal
+tmp = dpnp.array(Sigma)
+dpnp.fill_diagonal (tmp, dpnp.array(s))                      # Use DPNP variant of fill_diagonal -- updates tmp
+Sigma = dpnp.asnumpy (tmp)                                   # Turn back tmp as Numpy object
 ```
 
 Now, we want to check if the reconstructed `U @ Sigma @ Vt` is close to the original `img_gray` matrix.
@@ -328,10 +328,8 @@ img_array_transposed.shape
 Now we are ready to apply the SVD:
 
 ```{code-cell}
-# U, s, Vt = linalg.svd(img_array_transposed)                     # Original code to be executed on the CPU
-
-U, s, Vt = dpnp.linalg.svd (dpnp.array(img_array_transposed))     # Use DPNP variant of linalg.svd
-U, s, Vt = dpnp.asnumpy(U), dpnp.asnumpy(s), dpnp.asnumpy(Vt)     # Turn data objects back to regular NumPy
+# U, s, Vt = linalg.svd(img_array_transposed)                                             # Original code to be executed on the CPU
+U, s, Vt = (dpnp.asnumpy(x) for x in dpnp.linalg.svd (dpnp.array(img_array_transposed)))  # Use DPNP variant of linalg.svd
 ```
 
 Finally, to obtain the full approximated image, we need to reassemble these matrices into the approximation. Now, note that
@@ -355,7 +353,9 @@ Now, to build our approximation, we first need to make sure that our singular va
 Sigma = dpnp.asnumpy (dpnp.zeros((3, 768, 1024)))   # Use DPNP variant of zeros
 for j in range(3):
     # np.fill_diagonal(Sigma[j, :, :], s[j, :])                         # Original code to be executed on the CPU
-    dpnp.fill_diagonal(dpnp.array(Sigma[j, :, :]), dpnp.array(s[j, :])) # Use DPNP variant of fill_diagonal
+    tmp = dpnp.array(Sigma[j, :, :])
+    dpnp.fill_diagonal(tmp, dpnp.array(s[j, :]))                        # Use DPNP variant of fill_diagonal, use tmp intermediate object
+    Sigma[j, :, :] = dpnp.asnumpy (tmp)                                 # Move back tmp into the Sigma matrix
 ```
 
 Now, if we wish to rebuild the full SVD (with no approximation), we can do
