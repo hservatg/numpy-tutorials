@@ -568,10 +568,10 @@ for j in range(epochs):
     test_loss = dpnp.asnumpy(dpnp.sum(dpnp.asarray((test_labels - results) ** 2)))  # Use DPNP variant of sum -- NOTE! **2 is on the CPU!
 
     # Measure prediction accuracy on test set
-    test_accurate_predictions = np.sum(
+    test_accurate_predictions = dpnp.asnumpy( dpnp.sum(
         # np.argmax(results, axis=1) == np.argmax(test_labels, axis=1)                               # Original code to be executed on the CPU
         dpnp.argmax(dpnp.asarray(results), axis=1) == dpnp.argmax(dpnp.asarray(test_labels), axis=1) # Use DPNP variant of argmax
-    )
+    ) )
 
     # Store test set losses and accurate predictions.
     store_test_loss.append(test_loss)
