@@ -21,7 +21,7 @@ Before reading this tutorial, you should know a bit of Python. If you would like
 
 If you want to be able to run the examples in this tutorial, you should also have [matplotlib](https://matplotlib.org/) and [SciPy](https://scipy.org) installed on your computer.
 
-Check first if GPU is available through Data Parallel NumPy (dpnp):
+Check first if GPU is available through Data Parallel Extension for NumPy (dpnp):
 
 ```{code-cell}
 import sys
