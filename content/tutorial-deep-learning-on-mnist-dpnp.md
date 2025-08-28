@@ -555,10 +555,16 @@ for j in range(epochs):
     # vectorized manner, eliminating the need to loop over each image
     # individually:
 
-    results = relu(test_images @ weights_1) @ weights_2 ########### HSG !!!!! matmul? ###############
+    # results = relu(test_images @ weights_1) @ weights_2 # Original code to be executed on the CPU
+    results = dpnp.asnumpy(
+                dpnp.matmul(
+                  dpnp.asarray(relu(dpnp.asnumpy(dpnp.matmul(dpnp.asarray(test_images),dpnp.asarray(weights_1))))),
+                  dpnp.asarray(weights_2)
+                )
+              ) # Use DPNP variant of @ / matmul
 
     # Measure the error between the actual label (truth) and prediction values.
-    # test_loss = np.sum((test_labels - results) ** 2)                # Original code to be executed on the CPU
+    # test_loss = np.sum((test_labels - results) ** 2)                              # Original code to be executed on the CPU
     test_loss = dpnp.asnumpy(dpnp.sum(dpnp.asarray((test_labels - results) ** 2)))  # Use DPNP variant of sum -- NOTE! **2 is on the CPU!
 
     # Measure prediction accuracy on test set
