@@ -5,11 +5,11 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.11.4
+    jupytext_version: 1.17.2
 kernelspec:
-  display_name: Python 3
-  language: python
   name: python3
+  display_name: Python 3 (ipykernel)
+  language: python
 ---
 
 # Plotting Fractals
@@ -248,10 +248,13 @@ To gain access to a wider range of "Julia fractals", we can write a function tha
 def julia(mesh, c=-1, num_iter=10, radius=2):
 
     z = mesh.copy()
+#    diverge_len = dpnp.asnumpy(dpnp.zeros(z.shape))
     diverge_len = np.zeros(z.shape)
 
     for i in range(num_iter):
+#        conv_mask = dpnp.asnumpy(dpnp.abs(dpnp.asarray(z))) < radius
         conv_mask = np.abs(z) < radius
+#        z[conv_mask] = dpnp.asnumpy(dpnp.square(dpnp.asarray(z[conv_mask])) + c)
         z[conv_mask] = np.square(z[conv_mask]) + c
         diverge_len[conv_mask] += 1
 
