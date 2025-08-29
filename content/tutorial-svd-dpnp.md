@@ -184,8 +184,7 @@ where $Y$ is the array representing the grayscale image, and $R$, $G$ and $B$ ar
 
 ```{code-cell}
 # img_gray = img_array @ [0.2126, 0.7152, 0.0722]                                     # Original code to be executed on the CPU
-img_gray = dpnp.matmul (dpnp.array(img_array), dpnp.array([0.2126, 0.7152, 0.0722]))  # Use DPNP variant of matmul (@ operator)
-img_gray = dpnp.asnumpy (img_gray)
+img_gray = dpnp.asnumpy(dpnp.matmul (dpnp.array(img_array), dpnp.array([0.2126, 0.7152, 0.0722])))  # Use DPNP variant of matmul (@ operator)
 ```
 
 Now, `img_gray` has shape
