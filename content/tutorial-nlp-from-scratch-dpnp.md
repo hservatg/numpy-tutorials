@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.11.5
+      jupytext_version: 1.17.2
   kernelspec:
     display_name: Python 3 (ipykernel)
     language: python
@@ -555,7 +555,7 @@ def fp_output_gate(concat, next_cs, parameters):
     ot = sigmoid(dpnp.asnumpy(dpnp.dot(dpnp.asarray(parameters['Wo']), dpnp.asarray(concat))
                  + dpnp.asarray(parameters['bo'])))
     # next_hs = ot * np.tanh(next_cs)
-    next_hs = ot * dpnp.asnumyp(dpnp.tanh(dpnp.asarray(next_cs)))
+    next_hs = ot * dpnp.asnumpy(dpnp.tanh(dpnp.asarray(next_cs)))
     return ot, next_hs
 ```
 
@@ -587,8 +587,10 @@ def forward_prop(X_vec, parameters, input_dim):
     time_steps = len(X_vec)
 
     # Initialise hidden and cell state before passing to first time step
-    prev_hs = np.zeros((hidden_dim, 1))
-    prev_cs = np.zeros(prev_hs.shape)
+    # prev_hs = np.zeros((hidden_dim, 1))
+    prev_hs = dpnp.asnumpy(dpnp.zeros((hidden_dim, 1)))
+    # prev_cs = np.zeros(prev_hs.shape)
+    prev_cs = dpnp.asnumpy(dpnp.zeros(prev_hs.shape))
 
     # Store all the intermediate and final values here
     caches = {'lstm_values': [], 'fc_values': []}
@@ -603,7 +605,7 @@ def forward_prop(X_vec, parameters, input_dim):
 
         # Input to the gates is concatenated previous hidden state and current word embedding
         # concat = np.vstack((prev_hs, xt))
-        concat = dpnp.asnumpy(dpnp.vstack(dpnp.asarray((prev_hs, xt))))
+        concat = dpnp.asnumpy(dpnp.vstack((dpnp.asarray(prev_hs), dpnp.asarray(xt))))
 
         # Calculate output of the forget gate
         ft = fp_forget_gate(concat, parameters)
@@ -653,8 +655,6 @@ def forward_prop(X_vec, parameters, input_dim):
 
 ### Backpropagation
 
-HSG CONTINUE HERE!!
-
 After each forward pass through the network, you will implement the `backpropagation through time` algorithm to accumulate gradients of each parameter over the time steps. Backpropagation through a LSTM is not as straightforward as through other common Deep Learning architectures, due to the special way its underlying layers interact. Nonetheless, the approach is largely the same; identifying dependencies and applying the chain rule.
 
 
@@ -665,7 +665,7 @@ Lets start with defining a function to initialize gradients of each parameter as
 def initialize_grads(parameters):
     grads = {}
     for param in parameters.keys():
-        grads[f'd{param}'] = np.zeros((parameters[param].shape))
+        grads[f'd{param}'] = dpnp.asnumpy(dpnp.zeros((parameters[param].shape)))
     return grads
 ```
 
@@ -677,15 +677,22 @@ Define a function to calculate the gradients in the **Forget Gate**:
 ```python
 def bp_forget_gate(hidden_dim, concat, dh_prev, dc_prev, cache, gradients, parameters):
     # dft = dL/da2 * da2/dZ2 * dZ2/dh_prev * dh_prev/dc_prev * dc_prev/dft
+    # THIS v
+    # dft = ((dc_prev * cache["prev_cs"] + cache["ot"]
+    #       * (1 - np.square(np.tanh(cache["next_cs"])))
+    #       * cache["prev_cs"] * dh_prev) * cache["ft"] * (1 - cache["ft"]))
     dft = ((dc_prev * cache["prev_cs"] + cache["ot"]
-           * (1 - np.square(np.tanh(cache["next_cs"])))
+           * dpnp.asnumpy(1 - dpnp.square(dpnp.tanh(dpnp.asarray(cache["next_cs"]))))
            * cache["prev_cs"] * dh_prev) * cache["ft"] * (1 - cache["ft"]))
     # dWf = dft * dft/dWf
-    gradients['dWf'] += np.dot(dft, concat.T)
+    # gradients['dWf'] += np.dot(dft, concat.T)
+    gradients['dWf'] += dpnp.asnumpy(dpnp.dot(dpnp.asarray(dft), dpnp.asarray(concat.T)))
     # dbf = dft * dft/dbf
-    gradients['dbf'] += np.sum(dft, axis=1, keepdims=True)
+    # gradients['dbf'] += np.sum(dft, axis=1, keepdims=True)
+    gradients['dbf'] += dpnp.asnumpy(dpnp.sum(dpnp.asarray(dft), axis=1, keepdims=True))
     # dh_f = dft * dft/dh_prev
-    dh_f = np.dot(parameters["Wf"][:, :hidden_dim].T, dft)
+    # dh_f = np.dot(parameters["Wf"][:, :hidden_dim].T, dft)
+    dh_f = dpnp.asnumpy(dpnp.dot(dpnp.asarray(parameters["Wf"][:, :hidden_dim].T), dpnp.asarray(dft)))
     return dh_f, gradients
 ```
 
@@ -694,25 +701,38 @@ Define a function to calculate the gradients in the **Input Gate** and **Candida
 ```python
 def bp_input_gate(hidden_dim, concat, dh_prev, dc_prev, cache, gradients, parameters):
     # dit = dL/da2 * da2/dZ2 * dZ2/dh_prev * dh_prev/dc_prev * dc_prev/dit
+    # THIS v
+    # dit = ((dc_prev * cache["cmt"] + cache["ot"]
+    #       * (1 - np.square(np.tanh(cache["next_cs"])))
+    #       * cache["cmt"] * dh_prev) * cache["it"] * (1 - cache["it"]))
     dit = ((dc_prev * cache["cmt"] + cache["ot"]
-           * (1 - np.square(np.tanh(cache["next_cs"])))
+           * dpnp.asnumpy(1 - dpnp.square(dpnp.tanh(dpnp.asarray(cache["next_cs"]))))
            * cache["cmt"] * dh_prev) * cache["it"] * (1 - cache["it"]))
     # dcmt = dL/da2 * da2/dZ2 * dZ2/dh_prev * dh_prev/dc_prev * dc_prev/dcmt
     dcmt = ((dc_prev * cache["it"] + cache["ot"]
             * (1 - np.square(np.tanh(cache["next_cs"])))
             * cache["it"] * dh_prev) * (1 - np.square(cache["cmt"])))
+    # dcmt = ((dc_prev * cache["it"] + cache["ot"]
+    #        * (1 - dpnp.square(dpnp.tanh(dpnp.asarray(cache["next_cs"]))))
+    #        * cache["it"] * dh_prev) * (1 - np.square(cache["cmt"])))
     # dWi = dit * dit/dWi
-    gradients['dWi'] += np.dot(dit, concat.T)
+    # gradients['dWi'] += np.dot(dit, concat.T)
+    gradients['dWi'] += dpnp.asnumpy(dpnp.dot(dpnp.asarray(dit), dpnp.asarray(concat.T)))
     # dWcm = dcmt * dcmt/dWcm
-    gradients['dWcm'] += np.dot(dcmt, concat.T)
+    # gradients['dWcm'] += np.dot(dcmt, concat.T)
+    gradients['dWcm'] += dpnp.asnumpy(dpnp.dot(dpnp.asarray(dcmt), dpnp.asarray(concat.T)))
     # dbi = dit * dit/dbi
-    gradients['dbi'] += np.sum(dit, axis=1, keepdims=True)
+    # gradients['dbi'] += np.sum(dit, axis=1, keepdims=True)
+    gradients['dbi'] += dpnp.asnumpy(dpnp.sum(dpnp.asarray(dit), axis=1, keepdims=True))
     # dWcm = dcmt * dcmt/dbcm
-    gradients['dbcm'] += np.sum(dcmt, axis=1, keepdims=True)
+    # gradients['dbcm'] += np.sum(dcmt, axis=1, keepdims=True)
+    gradients['dbcm'] += dpnp.asnumpy(dpnp.sum(dpnp.asarray(dcmt), axis=1, keepdims=True))
     # dhi = dit * dit/dh_prev
-    dh_i = np.dot(parameters["Wi"][:, :hidden_dim].T, dit)
+    # dh_i = np.dot(parameters["Wi"][:, :hidden_dim].T, dit)
+    dh_i = dpnp.asnumpy(dpnp.dot(dpnp.asarray(parameters["Wi"][:, :hidden_dim].T), dpnp.asarray(dit)))
     # dhcm = dcmt * dcmt/dh_prev
-    dh_cm = np.dot(parameters["Wcm"][:, :hidden_dim].T, dcmt)
+    # dh_cm = np.dot(parameters["Wcm"][:, :hidden_dim].T, dcmt)
+    dh_cm = dpnp.asnumpy(dpnp.dot(dpnp.asarray(parameters["Wcm"][:, :hidden_dim].T), dpnp.asarray(dcmt)))
     return dh_i, dh_cm, gradients
 ```
 
@@ -721,14 +741,18 @@ Define a function to calculate the gradients for the **Output Gate**:
 ```python
 def bp_output_gate(hidden_dim, concat, dh_prev, dc_prev, cache, gradients, parameters):
     # dot = dL/da2 * da2/dZ2 * dZ2/dh_prev * dh_prev/dot
-    dot = (dh_prev * np.tanh(cache["next_cs"])
-           * cache["ot"] * (1 - cache["ot"]))
+    # dot = (dh_prev * np.tanh(cache["next_cs"])
+    #       * cache["ot"] * (1 - cache["ot"]))
+    dot = (dpnp.asarray(dh_prev) * dpnp.tanh(dpnp.asarray(cache["next_cs"]))
+           * dpnp.asarray(cache["ot"]) * (1 - dpnp.asarray(cache["ot"])))
     # dWo = dot * dot/dWo
-    gradients['dWo'] += np.dot(dot, concat.T)
+    # gradients['dWo'] += np.dot(dot, concat.T)
+    gradients['dWo'] += dpnp.asnumpy(dpnp.dot(dpnp.asarray(dot), dpnp.asarray(concat.T)))
     # dbo = dot * dot/dbo
-    gradients['dbo'] += np.sum(dot, axis=1, keepdims=True)
+    gradients['dbo'] += dpnp.asnumpy(dpnp.sum(dpnp.asarray(dot), axis=1, keepdims=True))
     # dho = dot * dot/dho
-    dh_o = np.dot(parameters["Wo"][:, :hidden_dim].T, dot)
+    # dh_o = np.dot(parameters["Wo"][:, :hidden_dim].T, dot)
+    dh_o = dpnp.asnumpy(dpnp.dot(dpnp.asarray(parameters["Wo"][:, :hidden_dim].T), dpnp.asarray(dot)))
     return dh_o, gradients
 ```
 
@@ -742,12 +766,15 @@ def bp_fc_layer (target, caches, gradients):
     dZ2 = predicted - target
     # dW2 = dL/da2 * da2/dZ2 * dZ2/dW2
     last_hs = caches['lstm_values'][-1]["next_hs"]
-    gradients['dW2'] = np.dot(dZ2, last_hs.T)
+    # gradients['dW2'] = np.dot(dZ2, last_hs.T)
+    gradients['dW2'] = dpnp.asnumpy(dpnp.dot(dpnp.asarray(dZ2), dpnp.asarray(last_hs.T)))
     # db2 = dL/da2 * da2/dZ2 * dZ2/db2
-    gradients['db2'] = np.sum(dZ2)
+    # gradients['db2'] = np.sum(dZ2)
+    gradients['db2'] = dpnp.asnumpy(dpnp.sum(dpnp.asarray(dZ2)))
     # dh_last = dZ2 * W2
     W2 = caches['fc_values'][0]["W2"]
-    dh_last = np.dot(W2.T, dZ2)
+    # dh_last = np.dot(W2.T, dZ2)
+    dh_last = dpnp.asnumpy(dpnp.dot(dpnp.asarray(W2.T), dpnp.asarray(dZ2)))
     return dh_last, gradients
 ```
 
@@ -764,14 +791,16 @@ def backprop(y, caches, hidden_dim, input_dim, time_steps, parameters):
 
     # Initialize gradients w.r.t previous hidden state and previous cell state
     dh_prev = dh_last
-    dc_prev = np.zeros((dh_prev.shape))
+    # dc_prev = np.zeros((dh_prev.shape))
+    dc_prev = dpnp.asnumpy(dpnp.zeros((dh_prev.shape)))
 
     # loop back over the whole sequence
     for t in reversed(range(time_steps)):
         cache = caches['lstm_values'][t]
 
         # Input to the gates is concatenated previous hidden state and current word embedding
-        concat = np.concatenate((cache["prev_hs"], cache["xt"]), axis=0)
+        # concat = np.concatenate((cache["prev_hs"], cache["xt"]), axis=0)
+        concat = dpnp.asnumpy(dpnp.concatenate((dpnp.asarray(cache["prev_hs"]), dpnp.asarray(cache["xt"])), axis=0))
 
         # Compute gates related derivatives
         # Calculate derivative w.r.t the input and parameters of forget gate
@@ -785,8 +814,11 @@ def backprop(y, caches, hidden_dim, input_dim, time_steps, parameters):
 
         # Compute derivatives w.r.t prev. hidden state and the prev. cell state
         dh_prev = dh_f + dh_i + dh_cm + dh_o
+        # dc_prev = (dc_prev * cache["ft"] + cache["ot"]
+        #           * (1 - np.square(np.tanh(cache["next_cs"])))
+        #           * cache["ft"] * dh_prev)
         dc_prev = (dc_prev * cache["ft"] + cache["ot"]
-                   * (1 - np.square(np.tanh(cache["next_cs"])))
+                   * dpnp.asnumpy((1 - dpnp.square(dpnp.tanh(dpnp.asarray(cache["next_cs"])))))
                    * cache["ft"] * dh_prev)
 
     return gradients
@@ -806,8 +838,10 @@ def initialise_mav(hidden_dim, input_dim, params):
     s = {}
     # Initialize dictionaries v, s
     for key in params:
-        v['d' + key] = np.zeros(params[key].shape)
-        s['d' + key] = np.zeros(params[key].shape)
+        # v['d' + key] = np.zeros(params[key].shape)
+        v['d' + key] = dpnp.asnumpy(dpnp.zeros(params[key].shape))
+        # s['d' + key] = np.zeros(params[key].shape)
+        s['d' + key] = dpnp.asnumpy(np.zeros(params[key].shape))
     # Return initialised moving averages
     return v, s
 ```
@@ -828,8 +862,11 @@ def update_parameters(parameters, gradients, v, s,
                         + (1 - beta2) * (gradients['d' + key] ** 2))
 
         # Update parameters
+        # parameters[key] = (parameters[key] - learning_rate
+        #                   * v['d' + key] / np.sqrt(s['d' + key] + 1e-8))
         parameters[key] = (parameters[key] - learning_rate
-                           * v['d' + key] / np.sqrt(s['d' + key] + 1e-8))
+                           * v['d' + key] / (dpnp.asnumpy(dpnp.sqrt(dpnp.asarray(s['d' + key]) + 1e-8))))
+        # HSG parameters[key] is a single element?
     # Return updated parameters and moving averages
     return parameters, v, s
 ```
@@ -859,10 +896,12 @@ def loss_f(A, Y):
     # define value of epsilon to prevent zero division error inside a log
     epsilon = 1e-5
     # Implement formula for negative log likelihood
-    loss = (- Y * np.log(A + epsilon)
-            - (1 - Y) * np.log(1 - A + epsilon))
+    # loss = (- Y * np.log(A + epsilon)
+    #        - (1 - dpnp.asarray(Y)) * np.log(1 - A + epsilon))
+    loss = dpnp.asnumpy(- Y * dpnp.log(dpnp.asarray(A) + epsilon)
+            - (1 - dpnp.asarray(Y)) * dpnp.log(1 - dpnp.asarray(A) + epsilon))
     # Return loss
-    return np.squeeze(loss)
+    return np.squeeze(loss) # HSG intentionally left untranslated because this already a numpy object only working on internal data representation
 ```
 
 Set up the neural network's learning experiment with a training loop and start the training process. You will also evaluate the model's performance on the training dataset to see how well the model is *learning* and the testing dataset to see how well it is *generalizing*.
@@ -936,8 +975,10 @@ for epoch in range(epochs):
         test_j.append(loss)
 
     # Calculate average of training and testing losses for one epoch
-    mean_train_cost = np.mean(train_j)
-    mean_test_cost = np.mean(test_j)
+    # mean_train_cost = np.mean(train_j)
+    mean_train_cost = dpnp.asnumpy(dpnp.mean(dpnp.asarray(train_j)))
+    # mean_test_cost = np.mean(test_j)
+    mean_test_cost = dpnp.asnumpy(dpnp.mean(dpnp.asarray(test_j)))
     training_losses.append(mean_train_cost)
     testing_losses.append(mean_test_cost)
     print('Epoch {} finished. \t  Training Loss : {} \t  Testing Loss : {}'.
@@ -1004,8 +1045,10 @@ for index, text in enumerate(X_pred):
     threshold = 0.5
     preds = np.array(preds)
     # Mark all predictions > threshold as positive and < threshold as negative
-    pos_indices = np.where(preds > threshold)  # indices where output > 0.5
-    neg_indices = np.where(preds < threshold)  # indices where output < 0.5
+    # pos_indices = np.where(preds > threshold)  # indices where output > 0.5
+    pos_indices = dpnp.asnumpy(dpnp.where(dpnp.asarray(preds) > threshold))  # indices where output > 0.5
+    # neg_indices = np.where(preds < threshold)  # indices where output < 0.5
+    neg_indices = dpnp.asnumpy(dpnp.where(dpnp.asarray(preds) < threshold))  # indices where output < 0.5
     # Store predictions and corresponding piece of text
     predictions[speakers[index]] = {'pos_paras': paras[pos_indices[0]],
                                     'neg_paras': paras[neg_indices[0]]}
