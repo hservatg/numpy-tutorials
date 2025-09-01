@@ -516,7 +516,7 @@ def sigmoid(x):
     # n = np.exp(np.fmin(x, 0))
     n = dpnp.asnumpy(dpnp.exp(dpnp.fmin(dpnp.asarray(x), 0)))
     # d = (1 + np.exp(-np.abs(x)))
-    d = (dpnp.asnumpy(1 + dpnp.exp(-dpnp.abs(dpnp.asarray(x)))))
+    d = dpnp.asnumpy(1 + dpnp.exp(-dpnp.abs(dpnp.asarray(x))))
     return n / d
 ```
 
