@@ -87,6 +87,9 @@ In this section, you will download the zipped MNIST dataset files originally dev
 **1.** Define a variable to store the training/test image/label names of the MNIST dataset in a list:
 
 ```{code-cell}
+import time
+
+
 data_sources = {
     "training_images": "train-images-idx3-ubyte.gz",  # 60,000 training images.
     "test_images": "t10k-images-idx3-ubyte.gz",  # 10,000 test images.
@@ -472,6 +475,7 @@ its performance over the training epochs.
 Start the training process:
 
 ```{code-cell}
+tbegin = time.time()
 # To store training and test set losses and accurate predictions
 # for visualization.
 store_training_loss = []
@@ -587,6 +591,8 @@ for j in range(epochs):
             f"  Test set accuracy: {test_accurate_predictions / len(test_images)}"
         )
     )
+tend = time.time()
+print (f"Total training time {tend-tbegin:.3f} seconds.")
 ```
 
 The training process may take many minutes, depending on a number of factors, such as the processing power of the machine you are running the experiment on and the number of epochs. To reduce the waiting time, you can change the epoch (iteration) variable from 100 to a lower number, reset the runtime (which will reset the weights), and run the notebook cells again.
