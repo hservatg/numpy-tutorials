@@ -158,6 +158,7 @@ import string
 import re
 import zipfile
 import os
+import time
 
 # Creating the random instance
 # rng = np.random.default_rng() # HSG
@@ -449,15 +450,15 @@ Now, you will clean the dataframes obtained above by removing occurrences of sto
 X_train = textproc.cleantext(train_df,
                        text_column='review',
                        remove_stopwords=True,
-                       remove_punc=True)[0:2000]
+                       remove_punc=True)[0:200] # HSG, originally 0:2000
 
 X_test = textproc.cleantext(test_df,
                        text_column='review',
                        remove_stopwords=True,
-                       remove_punc=True)[0:1000]
+                       remove_punc=True)[0:100] # HSG, originally 0:1000
 
-y_train = train_df['sentiment'].to_numpy()[0:2000]
-y_test = test_df['sentiment'].to_numpy()[0:1000]
+y_train = train_df['sentiment'].to_numpy()[0:200] # HSG, originally 0:2000
+y_test = test_df['sentiment'].to_numpy()[0:100] # HSG, originally 0:1000
 ```
 
 The same process is applicable on the collected speeches:
@@ -957,6 +958,9 @@ testing_losses = []
 # This is a training loop.
 # Run the learning experiment for a defined number of epochs (iterations).
 for epoch in range(epochs):
+
+    tbegin = time.time()
+
     #################
     # Training step #
     #################
@@ -1022,8 +1026,11 @@ for epoch in range(epochs):
     mean_test_cost = float(dpnp.mean(dpnp.asarray(test_j))) # HSG
     training_losses.append(mean_train_cost)
     testing_losses.append(mean_test_cost)
-    print('Epoch {} finished. \t  Training Loss : {} \t  Testing Loss : {}'.
-          format(epoch + 1, mean_train_cost, mean_test_cost))
+
+    tend = time.time()
+
+    print('Epoch {} finished. \t  Training Loss : {} \t  Testing Loss : {} \t Time : {:.3f} s'.
+          format(epoch + 1, mean_train_cost, mean_test_cost, tend-tbegin))
 
 # save the trained parameters to a npy file
 # np.save('tutorial-nlp-from-scratch/parameters.npy', parameters)

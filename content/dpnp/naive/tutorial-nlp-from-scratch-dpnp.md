@@ -123,6 +123,7 @@ import string
 import re
 import zipfile
 import os
+import time
 
 # Creating the random instance
 rng = np.random.default_rng()
@@ -409,15 +410,15 @@ Now, you will clean the dataframes obtained above by removing occurrences of sto
 X_train = textproc.cleantext(train_df,
                        text_column='review',
                        remove_stopwords=True,
-                       remove_punc=True)[0:2000]
+                       remove_punc=True)[0:200] # HSG, originally 0:2000
 
 X_test = textproc.cleantext(test_df,
                        text_column='review',
                        remove_stopwords=True,
-                       remove_punc=True)[0:1000]
+                       remove_punc=True)[0:100] # HSG, originally 0:1000
 
-y_train = train_df['sentiment'].to_numpy()[0:2000]
-y_test = test_df['sentiment'].to_numpy()[0:1000]
+y_train = train_df['sentiment'].to_numpy()[0:200] # HSG, originally 0:2000
+y_test = test_df['sentiment'].to_numpy()[0:100] # HSG, originally 0:1000
 ```
 
 The same process is applicable on the collected speeches:
@@ -877,6 +878,8 @@ def update_parameters(parameters, gradients, v, s,
 You will start by initializing all the parameters and hyperparameters being used in your network
 
 ```python
+import dpnp
+
 hidden_dim = 64
 input_dim = emb_matrix['memory'].shape[0]
 learning_rate = 0.001
@@ -916,10 +919,14 @@ testing_losses = []
 # This is a training loop.
 # Run the learning experiment for a defined number of epochs (iterations).
 for epoch in range(epochs):
+
+    tbegin = time.time()
+
     #################
     # Training step #
     #################
     train_j = []
+
     for sample, target in zip(X_train, y_train):
         # split text sample into words/tokens
         b = textproc.word_tokeniser(sample)
@@ -957,6 +964,7 @@ for epoch in range(epochs):
     # Evaluation step #
     ###################
     test_j = []
+
     for sample, target in zip(X_test, y_test):
         # split text sample into words/tokens
         b = textproc.word_tokeniser(sample)
@@ -974,6 +982,7 @@ for epoch in range(epochs):
         # Store testing set losses
         test_j.append(loss)
 
+
     # Calculate average of training and testing losses for one epoch
     # mean_train_cost = np.mean(train_j)
     mean_train_cost = dpnp.asnumpy(dpnp.mean(dpnp.asarray(train_j)))
@@ -981,8 +990,11 @@ for epoch in range(epochs):
     mean_test_cost = dpnp.asnumpy(dpnp.mean(dpnp.asarray(test_j)))
     training_losses.append(mean_train_cost)
     testing_losses.append(mean_test_cost)
-    print('Epoch {} finished. \t  Training Loss : {} \t  Testing Loss : {}'.
-          format(epoch + 1, mean_train_cost, mean_test_cost))
+
+    tend = time.time()
+
+    print('Epoch {} finished. \t  Training Loss : {} \t  Testing Loss : {} \t Time : {:.3f} s'.
+          format(epoch + 1, mean_train_cost, mean_test_cost, tend-tbegin))
 
 # save the trained parameters to a npy file
 np.save('tutorial-nlp-from-scratch/parameters.npy', parameters)
@@ -1045,10 +1057,8 @@ for index, text in enumerate(X_pred):
     threshold = 0.5
     preds = np.array(preds)
     # Mark all predictions > threshold as positive and < threshold as negative
-    # pos_indices = np.where(preds > threshold)  # indices where output > 0.5
-    pos_indices = dpnp.asnumpy(dpnp.where(dpnp.asarray(preds) > threshold))  # indices where output > 0.5
-    # neg_indices = np.where(preds < threshold)  # indices where output < 0.5
-    neg_indices = dpnp.asnumpy(dpnp.where(dpnp.asarray(preds) < threshold))  # indices where output < 0.5
+    pos_indices = np.where(preds > threshold)  # indices where output > 0.5
+    neg_indices = np.where(preds < threshold)  # indices where output < 0.5
     # Store predictions and corresponding piece of text
     predictions[speakers[index]] = {'pos_paras': paras[pos_indices[0]],
                                     'neg_paras': paras[neg_indices[0]]}
